@@ -12,7 +12,7 @@ on:
       set_release:
         description: "Select OS Release."
         required: false
-        default: "jammy"
+        default: "bullseye"
         type: choice
         options:
           - jammy
@@ -28,10 +28,11 @@ on:
       armbian_board:
         description: "Select device board."
         required: false
-        default: "all"
+        default: "s905x3-tx3_s905l3a-cm311"
         type: choice
         options:
           - all
+          - s905x3-tx3_s905l3a-cm311
           - s922x_s905x3_s905d_s912_s905l3a
           - s905d
           - s905d-ki-pro
