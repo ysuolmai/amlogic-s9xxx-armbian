@@ -207,8 +207,6 @@ jobs:
           sudo -E apt-get clean
           sudo timedatectl set-timezone "${TZ}"
           echo "status=success" >> ${GITHUB_OUTPUT}
-          mkdir /home/runner/work/amlogic-s9xxx-armbian/amlogic-s9xxx-armbian/build/cache
-
 
       - name: Download source code
         id: down
@@ -216,6 +214,7 @@ jobs:
         run: |
           df -hT ${PWD}
           git clone -q --single-branch --depth=1 --branch=main https://github.com/armbian/build.git build
+          mkdir -p /home/runner/work/amlogic-s9xxx-armbian/amlogic-s9xxx-armbian/build/cache
           echo "status=success" >> ${GITHUB_OUTPUT}
 
       - name: Compile Armbian [ ${{ inputs.set_release }} ]
