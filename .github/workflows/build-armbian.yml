@@ -194,7 +194,6 @@ jobs:
           swap-size-mb: 1024
           remove-dotnet: 'true'
           remove-android: 'true'
-          mkdir /home/runner/work/amlogic-s9xxx-armbian/amlogic-s9xxx-armbian/build/cache
           
       - name: Checkout
         uses: actions/checkout@v3
@@ -216,6 +215,8 @@ jobs:
           sudo -E apt-get clean
           sudo timedatectl set-timezone "${TZ}"
           echo "status=success" >> ${GITHUB_OUTPUT}
+          mkdir /home/runner/work/amlogic-s9xxx-armbian/amlogic-s9xxx-armbian/build/cache
+
 
       - name: Download source code
         id: down
