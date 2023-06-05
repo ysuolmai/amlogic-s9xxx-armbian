@@ -12,7 +12,7 @@ on:
       set_release:
         description: "Select OS Release."
         required: false
-        default: "bullseye"
+        default: "bookworm"
         type: choice
         options:
           - jammy
@@ -22,7 +22,7 @@ on:
       armbian_fstype:
         description: "Select armbian rootfs type."
         required: false
-        default: "ext4"
+        default: "btrfs"
         type: choice
         options:
           - ext4
