@@ -207,7 +207,8 @@ toolchain_check() {
     if [[ "${toolchain_name}" == "clang" ]]; then
         # Install LLVM
         echo -e "${INFO} Start installing the LLVM toolchain..."
-        curl -fsSL https://apt.llvm.org/llvm.sh | bash -s all
+        sudo apt-get -qq install -y lsb-release software-properties-common gnupg
+        curl -fsSL https://apt.llvm.org/llvm.sh | sudo bash -s all
         [[ "${?}" -eq "0" ]] || error_msg "LLVM installation failed."
 
         # Set cross compilation parameters
@@ -341,6 +342,9 @@ get_kernel_source() {
             echo -e "${INFO} Use local source code, compile the kernel version [ ${kernel_version} ]."
         fi
     fi
+
+    # Remove the local version number
+    rm -f ${kernel_path}/${local_kernel_path}/localversion
 
     # Apply custom kernel patches
     [[ "${auto_patch}" == "true" || "${auto_patch}" == "yes" ]] && apply_patch
