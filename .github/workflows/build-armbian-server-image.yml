@@ -22,7 +22,7 @@ on:
       armbian_board:
         description: "Select device board."
         required: false
-        default: "all"
+        default: "rs6pro"
         type: choice
         options:
           - all
@@ -48,6 +48,7 @@ on:
           - firefly-rk3399
           - fmx1-pro
           - jp-tvbox
+          - rs6pro
           - h28k
           - h66k
           - h68k
