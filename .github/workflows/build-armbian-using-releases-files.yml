@@ -349,6 +349,8 @@ jobs:
               grep -E "^[^#].*:${{ inputs.armbian_board }}:(yes|no)$" |
               head -n 1
           )"
+          KERNEL_TAGS="$(echo ${board_conf} | awk -F':' '{print $9}')"
+          echo ${{KERNEL_TAGS}}
     
       - name: Rebuild Armbian [ ${{ inputs.set_release }} ]
         uses: ophub/amlogic-s9xxx-armbian@main
