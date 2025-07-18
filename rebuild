@@ -556,6 +556,7 @@ confirm_version() {
             head -n 1
     )"
     [[ -n "${board_conf}" ]] || error_msg "[ ${board} ] config is missing!"
+    echo ${board_conf}
 
     # Get device settings options
     MODEL_ID="$(echo ${board_conf} | awk -F':' '{print $1}')"
@@ -571,6 +572,8 @@ confirm_version() {
     FAMILY="$(echo ${board_conf} | awk -F':' '{print $11}')"
     BOOT_CONF="$(echo ${board_conf} | awk -F':' '{print $12}')"
     CONTRIBUTORS="$(echo ${board_conf} | awk -F':' '{print $13}')"
+    
+    echo ${KERNEL_TAGS}
 
     # Check whether the key parameters are correct
     [[ -n "${PLATFORM}" ]] || error_msg "Invalid PLATFORM parameter: [ ${PLATFORM} ]"
