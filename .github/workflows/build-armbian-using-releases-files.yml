@@ -339,7 +339,8 @@ jobs:
 
       - name: Debug model_database.conf
         run: |
-          echo "Build path: ${build_path}"
+          build_path=./build-armbian
+          echo ${{ inputs.armbian_board }}
           ls -l ${build_path}/armbian-files/common-files/etc/
           cat ${build_path}/armbian-files/common-files/etc/model_database.conf
     
