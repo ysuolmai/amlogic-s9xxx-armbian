@@ -335,8 +335,6 @@ jobs:
           echo "status=success" >> ${GITHUB_OUTPUT}
 
 
-
-
       - name: Debug model_database.conf
         run: |
           build_path=./build-armbian
@@ -350,7 +348,7 @@ jobs:
               head -n 1
           )"
           KERNEL_TAGS="$(echo ${board_conf} | awk -F':' '{print $9}')"
-          echo ${{KERNEL_TAGS}}
+          echo ${KERNEL_TAGS}
     
       - name: Rebuild Armbian [ ${{ inputs.set_release }} ]
         uses: ophub/amlogic-s9xxx-armbian@main
