@@ -334,6 +334,15 @@ jobs:
           echo "build_tag=Armbian_${{ inputs.set_release }}_${{ inputs.armbian_storage }}_$(date +"%Y.%m")" >> ${GITHUB_OUTPUT}
           echo "status=success" >> ${GITHUB_OUTPUT}
 
+
+
+
+      - name: Debug model_database.conf
+        run: |
+          echo "Build path: ${build_path}"
+          ls -l ${build_path}/armbian-files/common-files/etc/
+          cat ${build_path}/armbian-files/common-files/etc/model_database.conf
+    
       - name: Rebuild Armbian [ ${{ inputs.set_release }} ]
         uses: ophub/amlogic-s9xxx-armbian@main
         if: ${{ steps.down.outputs.status }} == 'success' && !cancelled()
