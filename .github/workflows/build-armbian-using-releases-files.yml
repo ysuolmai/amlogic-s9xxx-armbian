@@ -311,7 +311,7 @@ jobs:
           echo "GITHUB_WORKSPACE: ${GITHUB_WORKSPACE}"
           echo "Current working directory: $(pwd)"
           ls -ld /builder/build || echo "/builder/build does not exist"
-          ls -ld /home/runner/work/_actions/ophub/amlogic-s9xxx-armbian/main/ || echo "Target directory does not exist"
+          ls -ld /home/runner/work/_actions/${{ github.repository }}/main/ || echo "Target directory does not exist"
       
           # 确保源和目标目录存在
           [[ -d "/builder/build" ]] || mkdir -p "/builder/build"
@@ -366,7 +366,7 @@ jobs:
           echo ${KERNEL_TAGS}
     
       - name: Rebuild Armbian [ ${{ inputs.set_release }} ]
-        uses: ysuolmai/amlogic-s9xxx-armbian@main
+        uses: ${{ github.repository }}@main
         if: ${{ steps.down.outputs.status }} == 'success' && !cancelled()
         with:
           build_target: armbian
