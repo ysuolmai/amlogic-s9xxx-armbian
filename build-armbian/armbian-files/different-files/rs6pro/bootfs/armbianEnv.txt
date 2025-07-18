@@ -2,8 +2,8 @@ verbosity=7
 bootlogo=true
 fdtfile=rockchip/rk3528-yixun-rs6pro.dtb
 rootdev=/dev/mmcblk0p2
-rootfstype=btrfs 
-rootflags=compress=zstd:6
+rootfstype=ext4
+rootflags=rw,errors=remount-ro
 console=serial
 consoleargs=console=ttyS0,1500000
 usbstoragequirks=0x2537:0x1066:u,0x2537:0x1068:u
