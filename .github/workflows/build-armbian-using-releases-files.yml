@@ -342,7 +342,13 @@ jobs:
           build_path=./build-armbian
           echo ${{ inputs.armbian_board }}
           ls -l ${build_path}/armbian-files/common-files/etc/
-          cat ${build_path}/armbian-files/common-files/etc/model_database.conf
+          model_conf=${build_path}/armbian-files/common-files/etc/model_database.conf
+          board_conf="$(
+            cat ${model_conf} |
+              sed -e 's/NA//g' -e 's/NULL//g' -e 's/[ ][ ]*//g' |
+              grep -E "^[^#].*:${{ inputs.armbian_board }}:(yes|no)$" |
+              head -n 1
+          )"
     
       - name: Rebuild Armbian [ ${{ inputs.set_release }} ]
         uses: ophub/amlogic-s9xxx-armbian@main
