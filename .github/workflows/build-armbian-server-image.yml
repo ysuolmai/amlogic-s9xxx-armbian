@@ -323,11 +323,11 @@ jobs:
           cd build/
               mkdir -p userpatches && \
               cat > userpatches/customize-image.sh << 'EOF'
-              #!/bin/bash
-              set -e
-              apt-get update
-              apt-get install -y python3-psutil python3-luma.oled
-              EOF
+                  #!/bin/bash
+                  set -e
+                  apt-get update || { echo "Failed to update package lists"; exit 1; }
+                  apt-get install -y python3-psutil python3-luma.oled || { echo "Failed to install packages"; exit 1; }
+                  EOF
               
               chmod +x userpatches/customize-image.sh
               ./compile.sh RELEASE=${{ inputs.set_release }} BOARD=odroidn2 BRANCH=current BUILD_MINIMAL=no \
