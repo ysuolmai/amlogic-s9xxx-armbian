@@ -12,7 +12,7 @@ on:
       set_release:
         description: "Select OS Release."
         required: false
-        default: "jammy"
+        default: "noble"
         type: choice
         options:
           - jammy
@@ -22,10 +22,11 @@ on:
       armbian_board:
         description: "Select device board."
         required: false
-        default: "all"
+        default: "rs6pro"
         type: choice
         options:
           - all
+          - rs6pro
           - top50
           - rest50
           - a311d-oes_s905d_s905x3_s922x-ct2000_wxy-oect
@@ -240,11 +241,12 @@ on:
       builder_name:
         description: "Set Armbian builder signature."
         required: false
-        default: "ophub"
+        default: "ysuolmai"
         type: choice
         options:
           - ophub
           - angel
+          - ysuolmai
 
 env:
   TZ: America/New_York
