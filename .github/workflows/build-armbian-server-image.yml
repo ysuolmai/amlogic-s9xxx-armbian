@@ -22,10 +22,11 @@ on:
       armbian_board:
         description: "Select device board."
         required: false
-        default: "h28k"
+        default: "rs6pro"
         type: choice
         options:
           - all
+          - rs6pro
           - top50
           - rest50
           - a311d-oes_s905d_s905x3_s922x-ct2000_wxy-oect
