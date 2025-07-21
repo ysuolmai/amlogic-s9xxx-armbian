@@ -321,15 +321,6 @@ jobs:
           rm -f build/patch/kernel/archive/meson64-6.12/*D-WAV*.patch || true
           export USERPACKAGES="python3-psutil python3-luma.oled"
           cd build/
-              mkdir -p userpatches && \
-              cat > userpatches/customize-image.sh << 'EOF'
-                  #!/bin/bash
-                  set -e
-                  apt-get update || { echo "Failed to update package lists"; exit 1; }
-                  apt-get install -y python3-psutil python3-luma.oled || { echo "Failed to install packages"; exit 1; }
-                  EOF
-              
-              chmod +x userpatches/customize-image.sh
               ./compile.sh RELEASE=${{ inputs.set_release }} BOARD=odroidn2 BRANCH=current BUILD_MINIMAL=no \
                            BUILD_ONLY=default HOST=armbian BUILD_DESKTOP=no EXPERT=yes KERNEL_CONFIGURE=no \
                            COMPRESS_OUTPUTIMAGE="sha" SHARE_LOG=yes
