@@ -119,6 +119,12 @@ fi
 
 # General System Services
 
+# Enable the OLED system monitor when the image ships its unit file.
+if [[ -f "/etc/systemd/system/oled_monitor.service" || -f "/usr/local/lib/systemd/system/oled_monitor.service" ]]; then
+    (systemctl daemon-reload && systemctl enable --now oled_monitor.service) || true
+    log_message "OLED monitor service enable/start attempted."
+fi
+
 # Restart ssh service
 mkdir -p -m0755 /var/run/sshd >/dev/null 2>&1 || true
 if [[ -f "/etc/init.d/ssh" ]]; then

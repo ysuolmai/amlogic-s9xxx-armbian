@@ -1,0 +1,14 @@
+[Unit]
+Description=OLED System Monitor for SSD1306
+After=network.target
+Requires=network-online.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/python3 /usr/local/bin/oled_monitor.py
+Restart=always
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target

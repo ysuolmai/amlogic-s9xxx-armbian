@@ -1135,6 +1135,14 @@ refactor_rootfs() {
             "${system_conf}"
     }
 
+    # Enable board-specific systemd services bundled in the image.
+    oled_service="etc/systemd/system/oled_monitor.service"
+    oled_wants_dir="etc/systemd/system/multi-user.target.wants"
+    [[ -f "${oled_service}" ]] && {
+        mkdir -p "${oled_wants_dir}"
+        ln -sf "../oled_monitor.service" "${oled_wants_dir}/oled_monitor.service"
+    }
+
     # Add custom sysctl configuration file
     [[ -d "etc/sysctl.d" && -f "etc/sysctl.conf" ]] && {
         ln -sf ../sysctl.conf etc/sysctl.d/99-sysctl.conf
