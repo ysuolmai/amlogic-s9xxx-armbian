@@ -23,7 +23,7 @@ on:
       armbian_board:
         description: "Select device board."
         required: false
-        default: "amlogic"
+        default: "rs6pro"
         type: choice
         options:
           - allwinner
@@ -251,7 +251,7 @@ on:
       armbian_kernel:
         description: "Select kernel version."
         required: false
-        default: "6.12.y_6.18.y"
+        default: "6.1.y"
         type: choice
         options:
           - 5.10.y

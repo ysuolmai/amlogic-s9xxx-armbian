@@ -102,7 +102,7 @@ auto_kernel="true"
 declare -A tags_list
 
 # Initialize the build device
-build_board="all"
+build_board="rs6pro"
 # Set Armbian size (Unit: MiB, boot_mb >= 256, root_mb >= 2048)
 boot_mb="512"
 root_mb="3000"
