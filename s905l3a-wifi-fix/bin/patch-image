@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+[[ "$#" -eq 3 ]] || { echo "Usage: patch-image SOC BOARD BOOT_DIR" >&2; exit 2; }
+soc="$1"
+board="$2"
+boot_dir="$3"
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+project_dir="$(cd -- "${script_dir}/.." && pwd)"
+
+[[ "$soc" == "s905l3a" ]] || exit 0
+
+case "$board" in
+    s905l3a-m401a)
+        profile="${project_dir}/profiles/m401a-rtl8822cs/profile.conf"
+        dtb="${boot_dir}/dtb/amlogic/meson-g12a-s905l3a-m401a.dtb"
+        ;;
+    *)
+        echo "No build-time S905L3A Wi-Fi profile for board: ${board}"
+        exit 0
+        ;;
+esac
+
+[[ -r "$dtb" ]] || { echo "Expected DTB not found: ${dtb}" >&2; exit 1; }
+candidate="${dtb}.wifi-fixed"
+"${script_dir}/patch-dtb" "$profile" "$dtb" "$candidate"
+mv -f -- "$candidate" "$dtb"
+echo "Applied S905L3A Wi-Fi profile to ${dtb}"

@@ -1,0 +1,168 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+LIB_DIR="${S905L3A_WIFI_FIX_LIB_DIR:-/usr/lib/s905l3a-wifi-fix}"
+PROFILE_ROOT="${LIB_DIR}/profiles"
+PATCHER="${LIB_DIR}/patch-dtb"
+STATE_DIR="/var/lib/s905l3a-wifi-fix"
+LOG_FILE="/var/log/s905l3a-wifi-fix.log"
+
+log() {
+    printf '[%s] %s\n' "$(date -Is)" "$*" | tee -a "$LOG_FILE"
+}
+
+die() {
+    log "ERROR: $*"
+    exit 1
+}
+
+dt_string() {
+    [[ -r "$1" ]] && tr -d '\000' <"$1" || true
+}
+
+compatible_string() {
+    [[ -r /proc/device-tree/compatible ]] && tr '\000' ',' </proc/device-tree/compatible || true
+}
+
+is_s905l3a() {
+    local compatible
+    compatible="$(compatible_string)"
+    [[ "$compatible" == *"amlogic,g12a"* ]] || return 1
+    [[ "$(dt_string /proc/device-tree/model)" =~ ^(M401A|CM311|E900V22|UNT403|B863AV3|IP112H) ]] \
+        || [[ "$compatible" == *"s905l3a"* ]]
+}
+
+detect_dtb_path() {
+    local value="" config
+    for config in /boot/uEnv.txt /boot/armbianEnv.txt /boot/extlinux/extlinux.conf; do
+        [[ -r "$config" ]] || continue
+        value="$(sed -n -E \
+            -e 's@^[[:space:]]*FDT[[:space:]]*=[[:space:]]*([^[:space:]#]+).*@\1@p' \
+            -e 's@^[[:space:]]*fdtfile[[:space:]]*=[[:space:]]*([^[:space:]#]+).*@\1@p' \
+            -e 's@^[[:space:]]*(fdt|FDT)[[:space:]]+([^[:space:]#]+).*@\2@p' \
+            "$config" | head -n 1)"
+        [[ -n "$value" ]] && break
+    done
+    [[ -n "$value" ]] || return 1
+    [[ "$value" == /* ]] || value="/boot/${value}"
+    [[ "$value" == /dtb/* ]] && value="/boot${value}"
+    readlink -f -- "$value"
+}
+
+wifi_present() {
+    local iface
+    for iface in /sys/class/net/*; do
+        [[ -d "${iface}/wireless" ]] && return 0
+    done
+    return 1
+}
+
+load_matching_profile() {
+    local dtb="$1" conf model compatible
+    model="$(dt_string /proc/device-tree/model)"
+    compatible="$(compatible_string)"
+    for conf in "$PROFILE_ROOT"/*/profile.conf; do
+        [[ -r "$conf" ]] || continue
+        unset PROFILE_ID MODEL_EXACT COMPATIBLE_REQUIRED DTB_BASENAME
+        source "$conf"
+        [[ "$model" == "${MODEL_EXACT:-}" ]] || continue
+        [[ "$(basename -- "$dtb")" == "${DTB_BASENAME:-}" ]] || continue
+        [[ "$compatible" == *"${COMPATIBLE_REQUIRED:-missing}"* ]] || continue
+        PROFILE_CONF="$conf"
+        return 0
+    done
+    return 1
+}
+
+profile_already_applied() {
+    local dtb="$1" status pwrseq
+    command -v fdtget >/dev/null 2>&1 || return 1
+    status="$(fdtget -t s "$dtb" "$SDIO_PATH" status 2>/dev/null || true)"
+    pwrseq="$(fdtget -t s "$dtb" "$PWRSEQ_PATH" compatible 2>/dev/null || true)"
+    [[ "$status" == "okay" && "$pwrseq" == "mmc-pwrseq-simple" ]]
+}
+
+diagnose() {
+    local dtb="unknown"
+    dtb="$(detect_dtb_path || true)"
+    log "model=$(dt_string /proc/device-tree/model)"
+    log "compatible=$(compatible_string)"
+    log "kernel=$(uname -r)"
+    log "dtb=${dtb}"
+    [[ -r "$dtb" ]] && log "dtb_sha256=$(sha256sum "$dtb" | awk '{print $1}')"
+    log "mmc_devices=$(find /sys/bus/mmc/devices -maxdepth 1 -mindepth 1 -printf '%f ' 2>/dev/null || true)"
+    if wifi_present; then log "diagnosis=wifi-interface-present"; else log "diagnosis=wifi-interface-missing"; fi
+}
+
+apply_auto() {
+    local reboot_after="${1:-no}" dtb candidate backup current_sha fixed_sha
+    [[ "$EUID" -eq 0 ]] || die "auto mode must run as root"
+    if ! is_s905l3a; then
+        log "skip=not-s905l3a"
+        return 0
+    fi
+    if wifi_present; then
+        log "result=wifi-already-present"
+        return 0
+    fi
+    dtb="$(detect_dtb_path)" || die "cannot determine active DTB"
+    [[ -r "$dtb" ]] || die "active DTB is not readable: ${dtb}"
+    load_matching_profile "$dtb" || {
+        log "result=no-tested-profile model=$(dt_string /proc/device-tree/model) dtb=$(basename -- "$dtb")"
+        return 0
+    }
+    if profile_already_applied "$dtb"; then
+        log "result=profile-already-applied profile=${PROFILE_ID}"
+        return 0
+    fi
+    [[ -x "$PATCHER" ]] || die "DTB patcher is missing: ${PATCHER}"
+
+    mkdir -p "$STATE_DIR"
+    candidate="$(mktemp "${STATE_DIR}/candidate.XXXXXX.dtb")"
+    trap 'rm -f "${candidate:-}"' EXIT
+    "$PATCHER" "$PROFILE_CONF" "$dtb" "$candidate" >>"$LOG_FILE" 2>&1 \
+        || die "profile ${PROFILE_ID} could not patch this kernel DTB"
+    current_sha="$(sha256sum "$dtb" | awk '{print $1}')"
+    fixed_sha="$(sha256sum "$candidate" | awk '{print $1}')"
+
+    if [[ "$current_sha" == "$fixed_sha" ]]; then
+        log "result=dtb-already-patched-but-wifi-missing profile=${PROFILE_ID}"
+        return 0
+    fi
+
+    backup="${dtb}.s905l3a-wifi-backup-$(date +%Y%m%d-%H%M%S)"
+    cp -a -- "$dtb" "$backup"
+    install -m 0644 -- "$candidate" "${dtb}.new"
+    mv -f -- "${dtb}.new" "$dtb"
+    sync
+    printf '%s\n' "profile=${PROFILE_ID}" "backup=${backup}" "fixed_sha256=${fixed_sha}" \
+        >"${STATE_DIR}/last-apply"
+    log "result=patched profile=${PROFILE_ID} backup=${backup} reboot_required=yes"
+    if [[ "$reboot_after" == "yes" ]]; then
+        log "action=reboot"
+        systemctl --no-block reboot
+    fi
+}
+
+rollback() {
+    local dtb backup
+    [[ "$EUID" -eq 0 ]] || die "rollback must run as root"
+    dtb="$(detect_dtb_path)" || die "cannot determine active DTB"
+    backup="$(find "$(dirname -- "$dtb")" -maxdepth 1 -type f \
+        -name "$(basename -- "$dtb").s905l3a-wifi-backup-*" -printf '%T@ %p\n' \
+        | sort -nr | head -n 1 | cut -d' ' -f2-)"
+    [[ -n "$backup" && -r "$backup" ]] || die "no backup created by this tool was found"
+    cp -a -- "$backup" "$dtb"
+    sync
+    log "result=rollback backup=${backup} reboot_required=yes"
+}
+
+case "${1:-auto}" in
+    auto) apply_auto "$([[ "${2:-}" == "--reboot" ]] && echo yes || echo no)" ;;
+    boot-auto) apply_auto yes ;;
+    diagnose) diagnose ;;
+    verify) diagnose; wifi_present ;;
+    rollback) rollback ;;
+    *) echo "Usage: s905l3a-wifi-fix [auto [--reboot]|boot-auto|diagnose|verify|rollback]" >&2; exit 2 ;;
+esac

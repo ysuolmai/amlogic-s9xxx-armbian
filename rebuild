@@ -57,6 +57,7 @@ uboot_path="${build_path}/u-boot"
 common_files="${build_path}/armbian-files/common-files"
 platform_files="${build_path}/armbian-files/platform-files"
 different_files="${build_path}/armbian-files/different-files"
+s905l3a_wifi_fix="${current_path}/s905l3a-wifi-fix"
 model_conf="${common_files}/etc/model_database.conf"
 firmware_path="${common_files}/usr/lib/firmware"
 tmp_dir="${current_path}/build/tmp_dir"
@@ -882,6 +883,18 @@ copy_files() {
     [[ -d "${different_bootfs}" ]] && cp -rf ${different_bootfs}/. ${tag_bootfs}
     [[ -d "${different_rootfs}" ]] && cp -af --no-preserve=ownership ${different_rootfs}/. ${tag_rootfs}
 
+    # Ship the repair runtime only in S905L3A images.
+    if [[ "${PLATFORM}" == "amlogic" && "${SOC}" == "s905l3a" && -d "${s905l3a_wifi_fix}/rootfs" ]]; then
+        cp -af --no-preserve=ownership "${s905l3a_wifi_fix}/rootfs/." "${tag_rootfs}"
+        mkdir -p "${tag_rootfs}/usr/lib/s905l3a-wifi-fix/profiles" \
+            "${tag_rootfs}/usr/lib/systemd/system/multi-user.target.wants"
+        install -m 0755 "${s905l3a_wifi_fix}/bin/s905l3a-wifi-fix" "${tag_rootfs}/usr/sbin/s905l3a-wifi-fix"
+        install -m 0755 "${s905l3a_wifi_fix}/bin/patch-dtb" "${tag_rootfs}/usr/lib/s905l3a-wifi-fix/patch-dtb"
+        cp -af --no-preserve=ownership "${s905l3a_wifi_fix}/profiles/." "${tag_rootfs}/usr/lib/s905l3a-wifi-fix/profiles/"
+        ln -sfn ../s905l3a-wifi-fix.service \
+            "${tag_rootfs}/usr/lib/systemd/system/multi-user.target.wants/s905l3a-wifi-fix.service"
+    fi
+
     # Copy the bootloader files
     [[ -d "${tag_rootfs}/usr/lib/u-boot" ]] || mkdir -p "${tag_rootfs}/usr/lib/u-boot"
     [[ -n "${tag_rootfs}" && -d "${tag_rootfs}/usr/lib/u-boot" ]] && rm -rf "${tag_rootfs}/usr/lib/u-boot"/*
@@ -923,6 +936,9 @@ replace_kernel() {
     # 02. For /boot/dtb/${PLATFORM}/*
     [[ -d "${tag_bootfs}/dtb/${PLATFORM}" ]] || mkdir -p ${tag_bootfs}/dtb/${PLATFORM}
     tar -mxzf ${kernel_dtb} -C ${tag_bootfs}/dtb/${PLATFORM}
+    if [[ "${PLATFORM}" == "amlogic" && "${SOC}" == "s905l3a" ]]; then
+        "${s905l3a_wifi_fix}/bin/patch-image" "${SOC}" "${board}" "${tag_bootfs}"
+    fi
     [[ "${PLATFORM}" == "rockchip" ]] && ln -sf dtb ${tag_bootfs}/dtb-${kernel_name}
     [[ "$(ls ${tag_bootfs}/dtb/${PLATFORM} -l 2>/dev/null | grep "^-" | wc -l)" -ge "2" ]] || error_msg "/boot/dtb/${PLATFORM} files is missing."
 

@@ -10,6 +10,8 @@ https://sc.350303.xyz/register?aff=C8X8NEL4BXX6
 
 > This fork includes custom support for YiXun RS6Pro (`rs6pro`, `rk35xx/6.1.y`) while tracking upstream Armbian device support.
 
+This fork also contains a board-profiled SDIO Wi-Fi auto-repair framework limited to `S905L3A`. The currently hardware-tested profile is `M401A + RTL8822CS`; see [s905l3a-wifi-fix](s905l3a-wifi-fix/README.md).
+
 [English Instructions](README.md) | [中文说明](README.cn.md) | [日本語説明](README.ja.md)
 
 Armbian is a lightweight Linux distribution built specifically for ARM chips, based on Debian/Ubuntu. The Armbian system is lean, clean, and 100% compatible with Debian/Ubuntu, inheriting its functionality and rich software ecosystem. It runs securely and stably on TF/SD/USB storage and the device's eMMC. This project preserves the integrity of the official Armbian system while extending support for unofficially supported devices such as TV boxes, and adds a set of convenient management commands. You can now replace the Android TV system on your TV box with Armbian, transforming it into a powerful server.

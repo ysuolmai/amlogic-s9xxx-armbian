@@ -1,0 +1,12 @@
+[Unit]
+Description=Apply a tested S905L3A SDIO Wi-Fi DTB fix
+After=local-fs.target
+ConditionPathExists=/proc/device-tree
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/s905l3a-wifi-fix boot-auto
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

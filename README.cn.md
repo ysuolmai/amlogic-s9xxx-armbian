@@ -4,6 +4,8 @@
 
 > 本 fork 在同步上游设备支持的同时，保留 YiXun RS6Pro（`rs6pro`、`rk35xx/6.1.y`）定制。
 
+本 fork 还包含仅针对 `S905L3A` 的板级 SDIO Wi-Fi 自动修复框架。目前经过实机验证的 profile 是 `M401A + RTL8822CS`，详见 [s905l3a-wifi-fix](s905l3a-wifi-fix/README.md)。
+
 # Armbian / 岸边
 
 [English Instructions](README.md) | [中文说明](README.cn.md) | [日本語説明](README.ja.md)
