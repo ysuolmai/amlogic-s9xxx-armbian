@@ -51,6 +51,7 @@ on:
           - crrc
           - dc-a588
           - dg3399
+          - dg-nas-lite
           - dg-tn3568
           - dlfr100
           - e20c
@@ -89,6 +90,7 @@ on:
           - leez
           - lubancat-1
           - lubancat-2
+          - lubancat-3
           - lubancat-4
           - lx-r3s
           - lyt-t68m
@@ -102,11 +104,13 @@ on:
           - nanopi-m5
           - nanopi-r5c
           - nanopi-r5s
+          - nanopi-som
           - nsy-g16-plus
           - nsy-g68-plus
           - orangepi-3b
           - orangepi-5-plus
           - orangepi-5-pro
+          - orangepi-5-ultra
           - orangepi-5b
           - orangepi-zero3
           - painet-p3
@@ -114,6 +118,7 @@ on:
           - photonicat
           - r66s
           - r68s
+          - recomputer-rk3576-devkit
           - renegade-rk3328
           - rk3318-box
           - roceos-k40pro
@@ -313,6 +318,8 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     if: ${{ github.event.repository.owner.id == github.event.sender.id }}
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
