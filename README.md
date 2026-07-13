@@ -10,7 +10,7 @@ https://sc.350303.xyz/register?aff=C8X8NEL4BXX6
 
 > This fork includes custom support for YiXun RS6Pro (`rs6pro`, `rk35xx/6.1.y`) while tracking upstream Armbian device support.
 
-This fork also contains a board-profiled SDIO Wi-Fi auto-repair framework limited to `S905L3A`. The currently hardware-tested profile is `M401A + RTL8822CS`; see [s905l3a-wifi-fix](s905l3a-wifi-fix/README.md).
+This fork also contains a board-profiled SDIO Wi-Fi auto-repair framework limited to `S905L3A`. Hardware-tested profiles cover `M401A + RTL8822CS` and `SKYWORTH E900V22D/S905L3A + RTL8822CS`; see [s905l3a-wifi-fix](s905l3a-wifi-fix/README.md).
 
 [English Instructions](README.md) | [中文说明](README.cn.md) | [日本語説明](README.ja.md)
 

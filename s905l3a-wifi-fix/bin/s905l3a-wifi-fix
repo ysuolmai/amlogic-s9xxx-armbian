@@ -64,7 +64,8 @@ load_matching_profile() {
     compatible="$(compatible_string)"
     for conf in "$PROFILE_ROOT"/*/profile.conf; do
         [[ -r "$conf" ]] || continue
-        unset PROFILE_ID MODEL_EXACT COMPATIBLE_REQUIRED DTB_BASENAME
+        unset PROFILE_ID MODEL_EXACT COMPATIBLE_REQUIRED DTB_BASENAME PATCH_MODE
+        unset SDIO_PATH PWRSEQ_PATH WIFI_CLOCK_PATH ROOT_MODEL ROOT_COMPATIBLES
         source "$conf"
         [[ "$model" == "${MODEL_EXACT:-}" ]] || continue
         [[ "$(basename -- "$dtb")" == "${DTB_BASENAME:-}" ]] || continue
@@ -76,11 +77,25 @@ load_matching_profile() {
 }
 
 profile_already_applied() {
-    local dtb="$1" status pwrseq
+    local dtb="$1" status pwrseq clock_status
     command -v fdtget >/dev/null 2>&1 || return 1
     status="$(fdtget -t s "$dtb" "$SDIO_PATH" status 2>/dev/null || true)"
     pwrseq="$(fdtget -t s "$dtb" "$PWRSEQ_PATH" compatible 2>/dev/null || true)"
-    [[ "$status" == "okay" && "$pwrseq" == "mmc-pwrseq-simple" ]]
+    [[ "$status" == "okay" && "$pwrseq" == "mmc-pwrseq-simple" ]] || return 1
+    case "${PATCH_MODE:-configure-sdio}" in
+        configure-sdio)
+            return 0
+            ;;
+        remove-broken-sdio-clock)
+            fdtget "$dtb" "$PWRSEQ_PATH" clocks >/dev/null 2>&1 && return 1
+            fdtget "$dtb" "$PWRSEQ_PATH" clock-names >/dev/null 2>&1 && return 1
+            clock_status="$(fdtget -t s "$dtb" "$WIFI_CLOCK_PATH" status 2>/dev/null || true)"
+            [[ "$clock_status" == "disabled" ]]
+            ;;
+        *)
+            return 1
+            ;;
+    esac
 }
 
 diagnose() {

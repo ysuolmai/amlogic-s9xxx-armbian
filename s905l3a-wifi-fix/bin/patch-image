@@ -12,6 +12,11 @@ project_dir="$(cd -- "${script_dir}/.." && pwd)"
 [[ "$soc" == "s905l3a" ]] || exit 0
 
 case "$board" in
+    s905l3a-e900v22d)
+        profile="${project_dir}/profiles/e900v22d-rtl8822cs/profile.conf"
+        source_dtb="${boot_dir}/dtb/amlogic/meson-g12a-s905l3a-e900v22c.dtb"
+        dtb="${boot_dir}/dtb/amlogic/meson-g12a-s905l3a-e900v22d.dtb"
+        ;;
     s905l3a-m401a)
         profile="${project_dir}/profiles/m401a-rtl8822cs/profile.conf"
         dtb="${boot_dir}/dtb/amlogic/meson-g12a-s905l3a-m401a.dtb"
@@ -22,6 +27,10 @@ case "$board" in
         ;;
 esac
 
+if [[ -n "${source_dtb:-}" ]]; then
+    [[ -r "$source_dtb" ]] || { echo "Source DTB not found: ${source_dtb}" >&2; exit 1; }
+    cp -- "$source_dtb" "$dtb"
+fi
 [[ -r "$dtb" ]] || { echo "Expected DTB not found: ${dtb}" >&2; exit 1; }
 candidate="${dtb}.wifi-fixed"
 "${script_dir}/patch-dtb" "$profile" "$dtb" "$candidate"

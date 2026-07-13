@@ -24,13 +24,15 @@ done
 
 # Profiles are trusted files shipped with this repository.
 source "$profile_conf"
+PATCH_MODE="${PATCH_MODE:-configure-sdio}"
 
-for variable in SDIO_PATH SDIO_PINCTRL_PATH SDIO_CLK_GATE_PATH \
-    GPIO_CONTROLLER_PATH VMMC_REGULATOR_PATH VQMMC_REGULATOR_PATH \
-    PWRSEQ_PATH RESET_GPIO_OFFSET RESET_GPIO_FLAGS POST_POWER_ON_DELAY_MS \
-    MAX_FREQUENCY; do
-    [[ -n "${!variable:-}" ]] || { echo "Profile variable is missing: ${variable}" >&2; exit 1; }
-done
+require_variables() {
+    local variable
+    for variable in "$@"; do
+        [[ -n "${!variable:-}" ]] \
+            || { echo "Profile variable is missing: ${variable}" >&2; exit 1; }
+    done
+}
 
 get_phandle() {
     local path="$1" value
@@ -43,57 +45,105 @@ get_phandle() {
 mkdir -p "$(dirname -- "$output_dtb")"
 cp -- "$input_dtb" "$output_dtb"
 
-# Fail before modifying anything if this kernel DTB no longer has the expected topology.
-for path in "$SDIO_PATH" "$SDIO_PINCTRL_PATH" "$SDIO_CLK_GATE_PATH" \
-    "$GPIO_CONTROLLER_PATH" "$VMMC_REGULATOR_PATH" "$VQMMC_REGULATOR_PATH"; do
-    fdtget "$output_dtb" "$path" compatible >/dev/null 2>&1 \
-        || fdtget -p "$output_dtb" "$path" >/dev/null 2>&1 \
-        || { echo "Expected DT node is missing: ${path}" >&2; exit 1; }
-done
+case "$PATCH_MODE" in
+    configure-sdio)
+        require_variables SDIO_PATH SDIO_PINCTRL_PATH SDIO_CLK_GATE_PATH \
+            GPIO_CONTROLLER_PATH VMMC_REGULATOR_PATH VQMMC_REGULATOR_PATH \
+            PWRSEQ_PATH RESET_GPIO_OFFSET RESET_GPIO_FLAGS \
+            POST_POWER_ON_DELAY_MS MAX_FREQUENCY
 
-sdio_pins="$(get_phandle "$SDIO_PINCTRL_PATH")"
-sdio_clk_gate="$(get_phandle "$SDIO_CLK_GATE_PATH")"
-gpio_controller="$(get_phandle "$GPIO_CONTROLLER_PATH")"
-vmmc="$(get_phandle "$VMMC_REGULATOR_PATH")"
-vqmmc="$(get_phandle "$VQMMC_REGULATOR_PATH")"
+        # Fail before modifying anything if this kernel DTB no longer has the expected topology.
+        for path in "$SDIO_PATH" "$SDIO_PINCTRL_PATH" "$SDIO_CLK_GATE_PATH" \
+            "$GPIO_CONTROLLER_PATH" "$VMMC_REGULATOR_PATH" "$VQMMC_REGULATOR_PATH"; do
+            fdtget "$output_dtb" "$path" compatible >/dev/null 2>&1 \
+                || fdtget -p "$output_dtb" "$path" >/dev/null 2>&1 \
+                || { echo "Expected DT node is missing: ${path}" >&2; exit 1; }
+        done
 
-# Pick a reserved high phandle and prove that the input does not already use it.
-pwrseq_phandle="7ffffffe"
-if dtc -q -I dtb -O dts "$output_dtb" | grep -Eq "phandle = <0x${pwrseq_phandle}>;"; then
-    echo "Reserved pwrseq phandle is already used" >&2
-    exit 1
-fi
+        sdio_pins="$(get_phandle "$SDIO_PINCTRL_PATH")"
+        sdio_clk_gate="$(get_phandle "$SDIO_CLK_GATE_PATH")"
+        gpio_controller="$(get_phandle "$GPIO_CONTROLLER_PATH")"
+        vmmc="$(get_phandle "$VMMC_REGULATOR_PATH")"
+        vqmmc="$(get_phandle "$VQMMC_REGULATOR_PATH")"
 
-fdtput -c "$output_dtb" "$PWRSEQ_PATH" 2>/dev/null || true
-fdtput -t s "$output_dtb" "$PWRSEQ_PATH" compatible mmc-pwrseq-simple
-fdtput -t x "$output_dtb" "$PWRSEQ_PATH" reset-gpios \
-    "$gpio_controller" "$RESET_GPIO_OFFSET" "$RESET_GPIO_FLAGS"
-fdtput -t i "$output_dtb" "$PWRSEQ_PATH" post-power-on-delay-ms "$POST_POWER_ON_DELAY_MS"
-fdtput -t x "$output_dtb" "$PWRSEQ_PATH" phandle "$pwrseq_phandle"
+        # Pick a reserved high phandle and prove that the input does not already use it.
+        pwrseq_phandle="7ffffffe"
+        if dtc -q -I dtb -O dts "$output_dtb" | grep -Eq "phandle = <0x${pwrseq_phandle}>;"; then
+            echo "Reserved pwrseq phandle is already used" >&2
+            exit 1
+        fi
 
-fdtput -t s "$output_dtb" "$SDIO_PATH" status okay
-fdtput -t x "$output_dtb" "$SDIO_PATH" pinctrl-0 "$sdio_pins"
-fdtput -t x "$output_dtb" "$SDIO_PATH" pinctrl-1 "$sdio_clk_gate"
-fdtput -t s "$output_dtb" "$SDIO_PATH" pinctrl-names default clk-gate
-fdtput -t i "$output_dtb" "$SDIO_PATH" '#address-cells' 1
-fdtput -t i "$output_dtb" "$SDIO_PATH" '#size-cells' 0
-fdtput -t i "$output_dtb" "$SDIO_PATH" bus-width 4
-fdtput "$output_dtb" "$SDIO_PATH" cap-sd-highspeed
-fdtput "$output_dtb" "$SDIO_PATH" sd-uhs-sdr50
-fdtput -t i "$output_dtb" "$SDIO_PATH" max-frequency "$MAX_FREQUENCY"
-fdtput "$output_dtb" "$SDIO_PATH" non-removable
-fdtput "$output_dtb" "$SDIO_PATH" disable-wp
-fdtput "$output_dtb" "$SDIO_PATH" keep-power-in-suspend
-fdtput -t x "$output_dtb" "$SDIO_PATH" mmc-pwrseq "$pwrseq_phandle"
-fdtput -t x "$output_dtb" "$SDIO_PATH" vmmc-supply "$vmmc"
-fdtput -t x "$output_dtb" "$SDIO_PATH" vqmmc-supply "$vqmmc"
+        fdtput -c "$output_dtb" "$PWRSEQ_PATH" 2>/dev/null || true
+        fdtput -t s "$output_dtb" "$PWRSEQ_PATH" compatible mmc-pwrseq-simple
+        fdtput -t x "$output_dtb" "$PWRSEQ_PATH" reset-gpios \
+            "$gpio_controller" "$RESET_GPIO_OFFSET" "$RESET_GPIO_FLAGS"
+        fdtput -t i "$output_dtb" "$PWRSEQ_PATH" post-power-on-delay-ms "$POST_POWER_ON_DELAY_MS"
+        fdtput -t x "$output_dtb" "$PWRSEQ_PATH" phandle "$pwrseq_phandle"
+
+        fdtput -t s "$output_dtb" "$SDIO_PATH" status okay
+        fdtput -t x "$output_dtb" "$SDIO_PATH" pinctrl-0 "$sdio_pins"
+        fdtput -t x "$output_dtb" "$SDIO_PATH" pinctrl-1 "$sdio_clk_gate"
+        fdtput -t s "$output_dtb" "$SDIO_PATH" pinctrl-names default clk-gate
+        fdtput -t i "$output_dtb" "$SDIO_PATH" '#address-cells' 1
+        fdtput -t i "$output_dtb" "$SDIO_PATH" '#size-cells' 0
+        fdtput -t i "$output_dtb" "$SDIO_PATH" bus-width 4
+        fdtput "$output_dtb" "$SDIO_PATH" cap-sd-highspeed
+        fdtput "$output_dtb" "$SDIO_PATH" sd-uhs-sdr50
+        fdtput -t i "$output_dtb" "$SDIO_PATH" max-frequency "$MAX_FREQUENCY"
+        fdtput "$output_dtb" "$SDIO_PATH" non-removable
+        fdtput "$output_dtb" "$SDIO_PATH" disable-wp
+        fdtput "$output_dtb" "$SDIO_PATH" keep-power-in-suspend
+        fdtput -t x "$output_dtb" "$SDIO_PATH" mmc-pwrseq "$pwrseq_phandle"
+        fdtput -t x "$output_dtb" "$SDIO_PATH" vmmc-supply "$vmmc"
+        fdtput -t x "$output_dtb" "$SDIO_PATH" vqmmc-supply "$vqmmc"
+        ;;
+    remove-broken-sdio-clock)
+        require_variables SDIO_PATH PWRSEQ_PATH WIFI_CLOCK_PATH ROOT_MODEL \
+            SOURCE_MODEL_EXACT SOURCE_COMPATIBLE_REQUIRED
+        [[ "$(fdtget -t s "$output_dtb" / model)" == "$SOURCE_MODEL_EXACT" ]] \
+            || { echo "Source DTB model mismatch" >&2; exit 1; }
+        source_compatible="$(fdtget -t s "$output_dtb" / compatible)"
+        [[ "$source_compatible" == *"$SOURCE_COMPATIBLE_REQUIRED"* ]] \
+            || { echo "Source DTB compatible mismatch" >&2; exit 1; }
+        [[ "$(fdtget -t s "$output_dtb" "$SDIO_PATH" status)" == "okay" ]] \
+            || { echo "SDIO controller is not enabled: ${SDIO_PATH}" >&2; exit 1; }
+        [[ "$(fdtget -t s "$output_dtb" "$PWRSEQ_PATH" compatible)" == "mmc-pwrseq-simple" ]] \
+            || { echo "Unexpected SDIO power sequence: ${PWRSEQ_PATH}" >&2; exit 1; }
+        pwrseq_clock="$(fdtget -t x "$output_dtb" "$PWRSEQ_PATH" clocks 2>/dev/null || true)"
+        [[ -n "$pwrseq_clock" ]] \
+            || { echo "Expected broken SDIO clock dependency is absent" >&2; exit 1; }
+        fdtget -p "$output_dtb" "$WIFI_CLOCK_PATH" >/dev/null 2>&1 \
+            || { echo "Expected Wi-Fi clock node is missing: ${WIFI_CLOCK_PATH}" >&2; exit 1; }
+        wifi_clock="$(get_phandle "$WIFI_CLOCK_PATH")"
+        [[ "$pwrseq_clock" == "$wifi_clock" ]] \
+            || { echo "SDIO clock does not reference ${WIFI_CLOCK_PATH}" >&2; exit 1; }
+
+        fdtput -d "$output_dtb" "$PWRSEQ_PATH" clocks clock-names
+        fdtput -t s "$output_dtb" "$WIFI_CLOCK_PATH" status disabled
+        fdtput -t s "$output_dtb" / model "$ROOT_MODEL"
+        if declare -p ROOT_COMPATIBLES >/dev/null 2>&1; then
+            fdtput -t s "$output_dtb" / compatible "${ROOT_COMPATIBLES[@]}"
+        fi
+        ;;
+    *)
+        echo "Unsupported patch mode: ${PATCH_MODE}" >&2
+        exit 1
+        ;;
+esac
 
 # Compile round-trip catches malformed output; explicit checks catch incomplete patches.
 validation_dts="$(mktemp)"
 trap 'rm -f "$validation_dts"' EXIT
 dtc -q -I dtb -O dts -o "$validation_dts" "$output_dtb"
 [[ "$(fdtget -t s "$output_dtb" "$SDIO_PATH" status)" == "okay" ]]
-[[ "$(fdtget -t x "$output_dtb" "$SDIO_PATH" mmc-pwrseq)" == "$pwrseq_phandle" ]]
 [[ "$(fdtget -t s "$output_dtb" "$PWRSEQ_PATH" compatible)" == "mmc-pwrseq-simple" ]]
+if [[ "$PATCH_MODE" == "configure-sdio" ]]; then
+    [[ "$(fdtget -t x "$output_dtb" "$SDIO_PATH" mmc-pwrseq)" == "$pwrseq_phandle" ]]
+else
+    ! fdtget "$output_dtb" "$PWRSEQ_PATH" clocks >/dev/null 2>&1
+    ! fdtget "$output_dtb" "$PWRSEQ_PATH" clock-names >/dev/null 2>&1
+    [[ "$(fdtget -t s "$output_dtb" "$WIFI_CLOCK_PATH" status)" == "disabled" ]]
+    [[ "$(fdtget -t s "$output_dtb" / model)" == "$ROOT_MODEL" ]]
+fi
 
 sha256sum "$output_dtb"

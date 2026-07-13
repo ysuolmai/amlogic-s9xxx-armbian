@@ -23,8 +23,11 @@ The rootfs also contains `s905l3a-wifi-fix.service` as a fallback. It only ships
 ## Current profiles
 
 - `m401a-rtl8822cs`: M401A, RTL8822CS, SDIO-A, GPIOX_7 active-low reset.
+- `e900v22d-rtl8822cs`: SKYWORTH E900V22D/S905L3A, RTL8822CS (`024C:C822`), using a dedicated DTB derived from the E900V22C base with the broken `wifi32k` dependency removed.
 
-CM311, E900V22 and other S905L3A variants are not modified until their PCB and Wi-Fi wiring have been verified.
+Other E900V22 revisions and S905L3A variants are not modified until their PCB and Wi-Fi wiring have been verified. The E900V22D profile must not be used for similarly named S905L3B or S905L3 devices.
+
+Build the verified E900V22D variant with board name `s905l3a-e900v22d`. The image builder copies `meson-g12a-s905l3a-e900v22c.dtb` to the dedicated `meson-g12a-s905l3a-e900v22d.dtb`, updates the root model/compatible values, removes the non-probing external clock dependency and disables the unused `wifi32k` node.
 
 ## Commands
 
