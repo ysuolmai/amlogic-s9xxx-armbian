@@ -81,7 +81,7 @@ show_menu() {
     printf "  │  ${CYAN}[3]${NC} 测试双风扇 (fan0 + fan1)\033[60G│\n"
     printf "  │  ${CYAN}[0]${NC} 退出\033[60G│\n"
     printf "  │                                                          \033[60G│\n"
-    printf "  │  提示: 测试过程中按 Ctrl+C 可停止并返回菜单\033[60G│\n"  
+    printf "  │  提示: 测试过程中按 Ctrl+C 可停止并返回菜单\033[60G│\n"
     printf "  └──────────────────────────────────────────────────────────┘\n"
     printf "\n"
     printf "  ${YELLOW}CPU温度: %s°C${NC}\n" "$(get_temp)"
