@@ -77,7 +77,7 @@ load_matching_profile() {
 }
 
 profile_already_applied() {
-    local dtb="$1" status pwrseq clock_status
+    local dtb="$1" status pwrseq clock_status emmc_frequency
     command -v fdtget >/dev/null 2>&1 || return 1
     status="$(fdtget -t s "$dtb" "$SDIO_PATH" status 2>/dev/null || true)"
     pwrseq="$(fdtget -t s "$dtb" "$PWRSEQ_PATH" compatible 2>/dev/null || true)"
@@ -90,7 +90,9 @@ profile_already_applied() {
             fdtget "$dtb" "$PWRSEQ_PATH" clocks >/dev/null 2>&1 && return 1
             fdtget "$dtb" "$PWRSEQ_PATH" clock-names >/dev/null 2>&1 && return 1
             clock_status="$(fdtget -t s "$dtb" "$WIFI_CLOCK_PATH" status 2>/dev/null || true)"
-            [[ "$clock_status" == "disabled" ]]
+            [[ "$clock_status" == "disabled" ]] || return 1
+            emmc_frequency="$(fdtget "$dtb" "$EMMC_PATH" max-frequency 2>/dev/null || true)"
+            [[ "$emmc_frequency" == "$EMMC_MAX_FREQUENCY" ]]
             ;;
         *)
             return 1

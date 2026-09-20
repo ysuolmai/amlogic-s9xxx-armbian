@@ -271,6 +271,22 @@ show_aml_model() {
     echo -e "${INFO} UBOOT_OVERLOAD: [ ${UBOOT_OVERLOAD} ]"
     echo -e "${INFO} NEED_OVERLOAD: [ ${NEED_OVERLOAD} ]"
 
+    # Older E900V22D images may not contain the generated board-specific DTB.
+    # Derive it from the bundled E900V22C DTB before validating the selection.
+    if [[ "${FDTFILE}" == "meson-g12a-s905l3a-e900v22d.dtb" && ! -f "/boot/dtb/amlogic/${FDTFILE}" ]]; then
+        source_dtb="/boot/dtb/amlogic/meson-g12a-s905l3a-e900v22c.dtb"
+        patcher="/usr/lib/s905l3a-wifi-fix/patch-dtb"
+        profile="/usr/lib/s905l3a-wifi-fix/profiles/e900v22d-rtl8822cs/profile.conf"
+        generated_dtb="/boot/dtb/amlogic/${FDTFILE}.wifi-fixed"
+        if [[ -f "${source_dtb}" && -x "${patcher}" && -f "${profile}" ]]; then
+            if "${patcher}" "${profile}" "${source_dtb}" "${generated_dtb}"; then
+                mv -f "${generated_dtb}" "/boot/dtb/amlogic/${FDTFILE}"
+            else
+                rm -f "${generated_dtb}"
+            fi
+        fi
+    fi
+
     # Check DTB file
     [[ -n "${FDTFILE}" && -f "/boot/dtb/amlogic/${FDTFILE}" ]] || error_msg "DTB file [ ${FDTFILE} ] not found. Installation aborted!"
     # Check UBOOT_OVERLOAD file

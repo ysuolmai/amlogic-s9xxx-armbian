@@ -99,7 +99,7 @@ case "$PATCH_MODE" in
         ;;
     remove-broken-sdio-clock)
         require_variables SDIO_PATH PWRSEQ_PATH WIFI_CLOCK_PATH ROOT_MODEL \
-            SOURCE_MODEL_EXACT SOURCE_COMPATIBLE_REQUIRED
+            SOURCE_MODEL_EXACT SOURCE_COMPATIBLE_REQUIRED EMMC_PATH EMMC_MAX_FREQUENCY
         [[ "$(fdtget -t s "$output_dtb" / model)" == "$SOURCE_MODEL_EXACT" ]] \
             || { echo "Source DTB model mismatch" >&2; exit 1; }
         source_compatible="$(fdtget -t s "$output_dtb" / compatible)"
@@ -121,6 +121,9 @@ case "$PATCH_MODE" in
         fdtput -d "$output_dtb" "$PWRSEQ_PATH" clocks clock-names
         fdtput -t s "$output_dtb" "$WIFI_CLOCK_PATH" status disabled
         fdtput -t s "$output_dtb" / model "$ROOT_MODEL"
+        fdtget -p "$output_dtb" "$EMMC_PATH" >/dev/null 2>&1 \
+            || { echo "Expected eMMC node is missing: ${EMMC_PATH}" >&2; exit 1; }
+        fdtput -t i "$output_dtb" "$EMMC_PATH" max-frequency "$EMMC_MAX_FREQUENCY"
         if declare -p ROOT_COMPATIBLES >/dev/null 2>&1; then
             fdtput -t s "$output_dtb" / compatible "${ROOT_COMPATIBLES[@]}"
         fi
@@ -144,6 +147,7 @@ else
     ! fdtget "$output_dtb" "$PWRSEQ_PATH" clock-names >/dev/null 2>&1
     [[ "$(fdtget -t s "$output_dtb" "$WIFI_CLOCK_PATH" status)" == "disabled" ]]
     [[ "$(fdtget -t s "$output_dtb" / model)" == "$ROOT_MODEL" ]]
+    [[ "$(fdtget "$output_dtb" "$EMMC_PATH" max-frequency)" == "$EMMC_MAX_FREQUENCY" ]]
 fi
 
 sha256sum "$output_dtb"
